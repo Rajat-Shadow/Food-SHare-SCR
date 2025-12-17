@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>FoodShare — Available Food</title>
+
+<style>
+:root{ --green:#2b7a0b; --muted:#6b7280; --bg:#f5f7fa; }
+
+body{font-family:Inter,system-ui;margin:0;background:var(--bg);color:#0f172a}
+header{display:flex;justify-content:space-between;align-items:center;
+padding:18px 28px;background:white;box-shadow:0 2px 10px rgba(0,0,0,0.06)}
+nav a{margin:0 10px;color:var(--muted);text-decoration:none;font-weight:600}
+nav a:hover{color:var(--green)}
+.btn{padding:10px 16px;border:none;border-radius:10px;font-weight:600;cursor:pointer}
+.btn.green{background:var(--green);color:white}
+.btn.ghost{border:1px solid var(--green);color:var(--green);background:transparent}
+
+.list-wrap{max-width:900px;margin:32px auto;padding:20px}
+.item{background:white;padding:16px;border-radius:12px;margin-top:12px;
+display:flex;justify-content:space-between;align-items:center;
+box-shadow:0 4px 16px rgba(0,0,0,0.05)}
+.muted{color:var(--muted)}
+
+#toast{position:fixed;bottom:20px;right:20px;background:#16a34a;
+color:white;padding:12px 16px;border-radius:10px;display:none;font-weight:600}
+
+/* 🔔 Notification */
+#bell{position:relative;cursor:pointer;font-size:18px;display:none}
+#bellCount{
+  position:absolute;top:-6px;right:-6px;
+  background:red;color:white;font-size:11px;
+  padding:2px 6px;border-radius:999px;display:none
+}
+#notifBox{
+  display:none;position:absolute;right:30px;top:70px;
+  background:white;width:320px;max-height:360px;
+  overflow:auto;border-radius:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.15);z-index:999
+}
+.notif{padding:12px;border-bottom:1px solid #eee;font-size:14px}
+.notif.unread{background:#ecfdf3}
+.notif small{display:block;color:#666;margin-top:4px}
+
+#profileMenu{position:absolute;top:70px;right:30px;background:white;
+border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,0.1);
+padding:10px;display:none;min-width:150px}
+#profileMenu a{display:block;padding:8px 12px;text-decoration:none;color:black}
+#profileMenu a:hover{background:#f3f4f6}
+
+/* Auth modal */
+#authOverlay{
+  position:fixed; inset:0; background:rgba(0,0,0,0.45);
+  display:none; justify-content:center; align-items:center; z-index:9999;
+}
+#authModal{
+  background:white; padding:24px; border-radius:14px; width:380px;
+  display:flex; flex-direction:column; gap:10px;
+}
+input,select{width:100%;padding:10px;border-radius:8px;border:1px solid #ddd}
+#closeModal{cursor:pointer;font-size:18px;text-align:right;color:#444}
+</style>
+</head>
+
+<body>
+
+<div id="toast"></div>
+
+<!-- AUTH MODAL -->
+<div id="authOverlay">
+<div id="authModal">
+<div id="closeModal">✖</div>
+<h3>Login / Register</h3>
+<input id="authName" placeholder="Full Name" style="display:none;">
+<input id="authEmail" placeholder="Email">
+<input id="authPassword" type="password" placeholder="Password">
+<select id="authRole" style="display:none;">
+<option value="pg">PG / Donor</option>
+<option value="ngo">NGO</option>
+</select>
+<p id="authError" style="color:#b91c1c;font-size:13px"></p>
+<button class="btn green" id="authSubmit">Login</button>
+<button class="btn ghost" id="switchMode">Switch to Register</button>
+</div>
+</div>
+
+<header>
+<div style="font-size:22px;font-weight:800;color:var(--green)">FoodShare</div>
+
+<nav>
+<a href="index.html">Home</a>
+<a href="list.html" style="color:var(--green)">Available Food</a>
+<a href="how.html">How it Works</a>
+<a href="contact.html">Contact</a>
+<a href="history.html" id="historyNav" style="display:none;">History</a>
+</nav>
+
+<div style="display:flex;gap:10px;align-items:center">
+<button class="btn green" id="openAuthBtn">Login / Register</button>
+
+<!-- 🔔 Bell -->
+<div id="bell">
+🔔<span id="bellCount">0</span>
+</div>
+
+<div id="profileBox" style="display:none;cursor:pointer;align-items:center;gap:6px;">
+<span id="profileName"></span>
+<span id="profileRoleTag"
+style="font-size:12px;padding:4px 8px;border-radius:8px;
+background:#ecfdf3;color:#15803d"></span>
+</div>
+
+<button class="btn ghost" onclick="location.href='upload.html'" id="uploadBtn">Upload Food</button>
+</div>
+</header>
+
+<div id="notifBox"></div>
+
+<div id="profileMenu">
+<a href="upload.html" id="uploadLink">Upload Food</a>
+<a href="history.html">History</a>
+<a id="logoutBtn" style="color:#b91c1c;cursor:pointer">Logout</a>
+</div>
+
+<div class="list-wrap">
+<h2>Available Food Posts</h2>
+<div id="foodList"></div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+const API="http://localhost:5001";
+const socket=io(API);
+let mode="login";
+
+// Toast
+function showToast(msg){
+  toast.innerText=msg;
+  toast.style.display="block";
+  setTimeout(()=>toast.style.display="none",3000);
+}
+
+// ================= UI =================
+function setupUserUI(){
+  const token=localStorage.getItem("token");
+  const role=localStorage.getItem("role");
+  const name=localStorage.getItem("name");
+  const uid =localStorage.getItem("userId");
+
+  if(token){
+    openAuthBtn.style.display="none";
+    profileBox.style.display="flex";
+    bell.style.display="block";
+    historyNav.style.display="inline";
+
+    profileName.innerText=name;
+    profileRoleTag.innerText=role==="pg"?"PG":"NGO";
+    if(role==="ngo") uploadLink.style.display="none";
+
+    socket.emit("registerUser",uid);
+    loadUnread();
+  }
+}
+setupUserUI();
+
+// ================= 🔔 Notifications =================
+async function loadUnread(){
+  const r=await fetch(`${API}/api/notification/unread-count`,{
+    headers:{Authorization:"Bearer "+localStorage.getItem("token")}
+  });
+  const d=await r.json();
+  if(d.count>0){
+    bellCount.innerText=d.count;
+    bellCount.style.display="inline";
+  }
+}
+
+async function loadNotifications(){
+  const r=await fetch(`${API}/api/notification`,{
+    headers:{Authorization:"Bearer "+localStorage.getItem("token")}
+  });
+  const list=await r.json();
+  notifBox.innerHTML="";
+  list.forEach(n=>{
+    const div=document.createElement("div");
+    div.className="notif"+(n.read?"":" unread");
+    div.innerHTML=`${n.message}<small>${new Date(n.createdAt).toLocaleString()}</small>`;
+    notifBox.appendChild(div);
+  });
+
+  await fetch(`${API}/api/notification/mark-read`,{
+    method:"POST",
+    headers:{Authorization:"Bearer "+localStorage.getItem("token")}
+  });
+  bellCount.style.display="none";
+}
+
+bell.onclick=()=>{
+  notifBox.style.display=notifBox.style.display==="block"?"none":"block";
+  loadNotifications();
+};
+
+socket.on("notification",()=>loadUnread());
+
+// ================= POSTS =================
+async function loadPosts(){
+  const r=await fetch(`${API}/api/food/list`);
+  renderPosts(await r.json());
+}
+loadPosts();
+
+function renderPosts(posts){
+  foodList.innerHTML="";
+  posts.forEach(p=>{
+    const div=document.createElement("div");
+    div.className="item";
+    div.innerHTML=`
+      <div>
+        <strong>${p.title}</strong>
+        <div class="muted">${p.description} · ${p.location}</div>
+        <div class="muted">${p.quantity} meals</div>
+      </div>
+      ${localStorage.getItem("role")==="ngo" && p.status!=="claimed"
+        ? `<button class="btn green" onclick="claimFood('${p._id}')">Claim</button>`
+        : `<span class="muted">${p.status}</span>`}`;
+    foodList.appendChild(div);
+  });
+}
+
+async function claimFood(id){
+  const r=await fetch(`${API}/api/food/${id}/claim`,{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      "Authorization":"Bearer "+localStorage.getItem("token")
+    }
+  });
+  const d=await r.json();
+  if(d.success){showToast("Food claimed successfully");loadPosts();}
+}
+
+// ================= AUTH =================
+openAuthBtn.onclick=()=>authOverlay.style.display="flex";
+closeModal.onclick=()=>authOverlay.style.display="none";
+
+switchMode.onclick=()=>{
+  mode=mode==="login"?"register":"login";
+  authName.style.display=authRole.style.display=mode==="register"?"block":"none";
+  authSubmit.innerText=mode==="login"?"Login":"Register";
+};
+
+authSubmit.onclick=async()=>{
+  const body=mode==="login"
+    ? {email:authEmail.value,password:authPassword.value}
+    : {name:authName.value,email:authEmail.value,password:authPassword.value,role:authRole.value};
+
+  const r=await fetch(`${API}/api/auth/${mode}`,{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(body)
+  });
+  const d=await r.json();
+  if(d.error){authError.innerText=d.error;return;}
+
+  localStorage.setItem("token",d.token);
+  localStorage.setItem("role",d.user.role);
+  localStorage.setItem("name",d.user.name);
+  localStorage.setItem("userId",d.user._id);
+  location.reload();
+};
+
+// Dropdown + logout
+profileBox.onclick=()=>profileMenu.style.display=profileMenu.style.display==="block"?"none":"block";
+logoutBtn.onclick=()=>{localStorage.clear();location.reload();};
+</script>
+</body>
+</html>

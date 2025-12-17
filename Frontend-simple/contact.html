@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Contact Us - FoodShare</title>
+  <style>
+    :root{
+      --green:#2b7a0b; --accent:#1e5a08; --muted:#6b7280; --card:#fff; --bg:#f5f7fa;
+    }
+    *{box-sizing:border-box}
+    body{
+      font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      margin:0;
+      background:var(--bg);
+      color:#0f172a;
+    }
+    .wrap{max-width:900px;margin:24px auto;padding:20px}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px}
+    .brand{display:flex;align-items:center;gap:10px}
+    .logo{
+      width:40px;height:40px;border-radius:10px;
+      background:linear-gradient(135deg,var(--green),var(--accent));
+      display:flex;align-items:center;justify-content:center;
+      color:#fff;font-weight:700;font-size:18px;
+    }
+    .btn{
+      background:var(--green);color:#fff;border:none;
+      padding:8px 16px;border-radius:999px;cursor:pointer;font-weight:600;
+    }
+    .card{
+      background:#fff;border-radius:18px;padding:22px;
+      box-shadow:0 6px 20px rgba(15,23,42,0.08);
+      margin-bottom:18px;
+    }
+    h2{margin:0 0 6px}
+    p.muted{margin:0 0 16px;color:var(--muted);font-size:14px}
+    .grid{display:grid;grid-template-columns:2fr 1.2fr;gap:16px}
+    @media(max-width:768px){.grid{grid-template-columns:1fr}}
+    .info-item{margin-bottom:10px}
+    .label{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:0.05em}
+    .value{font-size:14px;font-weight:600}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo">FS</div>
+        <div>
+          <div style="font-weight:700;">FoodShare</div>
+          <div style="font-size:12px;color:#6b7280;">Contact & Support</div>
+        </div>
+      </div>
+      <button class="btn" onclick="window.location.href='index.html'">← Back to Home</button>
+    </header>
+
+    <div class="card">
+      <h2>Join our mission ❤️</h2>
+      <p class="muted">
+        FoodShare is a social responsibility project that connects PGs and NGOs to reduce food waste
+        and support people in need. If you’d like to know more, collaborate, or pilot this in your
+        college or community, reach out to us.
+      </p>
+
+      <div class="grid">
+        <div>
+          <div class="info-item">
+            <div class="label">Project Team</div>
+            <div class="value">FoodShare Student Team</div>
+          </div>
+
+          <div class="info-item">
+            <div class="label">Email</div>
+            <div class="value">👉 <span>your-email@example.com</span></div>
+          </div>
+
+          <div class="info-item">
+            <div class="label">Phone</div>
+            <div class="value">👉 <span>+91-XXXXXXXXXX</span></div>
+          </div>
+
+          <div class="info-item">
+            <div class="label">College / Location</div>
+            <div class="value">👉 <span>Your College Name, City</span></div>
+          </div>
+
+          <p class="muted" style="margin-top:14px;">
+            ✏️ <b>Note:</b> Replace the email, phone and location above with your real details before submission.
+          </p>
+        </div>
+
+        <div>
+          <div style="background:#f9fafb;border-radius:14px;padding:14px;border:1px dashed #d1d5db;">
+            <h3 style="margin-top:0;font-size:15px;">For NGO / PG collaborations</h3>
+            <p class="muted">
+              • Colleges can use this system during fests or daily mess operations.<br/>
+              • NGOs can partner with nearby PGs and hostels to receive regular surplus food.<br/>
+              • This prototype can be scaled with features like live maps, pickup scheduling and analytics.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="text-align:center">
+      <h3 style="margin:0 0 6px;">Ready to see the demo?</h3>
+      <p class="muted">Login as a PG to upload a sample food post, then login as an NGO to claim it and walk through the full flow.</p>
+      <button class="btn" onclick="window.location.href='index.html'">Go to Home & Login</button>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>FoodShare — History</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<style>
+:root{ --green:#2b7a0b; --muted:#6b7280; --bg:#f5f7fa; }
+
+body{ font-family:Inter,system-ui;margin:0;background:var(--bg);color:#0f172a;}
+
+header{
+  background:white;padding:18px 28px;
+  display:flex;justify-content:space-between;align-items:center;
+  box-shadow:0 2px 10px rgba(0,0,0,0.06);
+}
+
+nav a{margin:0 10px;font-weight:600;color:var(--muted);text-decoration:none}
+nav a:hover{color:var(--green)}
+
+.btn{padding:10px 14px;border:none;border-radius:10px;font-weight:600;cursor:pointer}
+.btn.green{background:var(--green);color:white}
+.btn.ghost{border:1px solid var(--green);color:var(--green);background:transparent}
+
+.container{
+  max-width:900px;margin:32px auto;background:white;
+  padding:22px;border-radius:16px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.05);
+}
+
+.item{
+  background:#f9fafb;border:1px solid #ddd;
+  padding:16px;border-radius:10px;margin-top:12px;
+}
+
+.muted{color:var(--muted);font-size:14px}
+
+/* 🔔 Notification Bell */
+#bell{
+  position:relative;cursor:pointer;font-size:20px;
+}
+#bellCount{
+  position:absolute;top:-6px;right:-6px;
+  background:red;color:white;font-size:11px;
+  padding:2px 6px;border-radius:999px;display:none;
+}
+#notifBox{
+  display:none;position:absolute;right:0;top:40px;
+  background:white;width:320px;max-height:360px;
+  overflow:auto;border-radius:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.15);
+  z-index:999;
+}
+.notif{
+  padding:12px;border-bottom:1px solid #eee;font-size:14px;
+}
+.notif.unread{background:#ecfdf3}
+.notif small{display:block;color:#666;margin-top:4px}
+
+/* Profile Dropdown */
+#profileBox{display:none;align-items:center;gap:6px;cursor:pointer;}
+#profileMenu{
+  display:none;position:absolute;right:30px;top:70px;
+  background:white;padding:10px;border-radius:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,0.1);
+}
+#profileMenu a{display:block;text-decoration:none;color:black;padding:10px;border-radius:6px}
+#profileMenu a:hover{background:#f3f4f6}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div style="font-size:22px;font-weight:800;color:var(--green)">FoodShare</div>
+
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="list.html">Available Food</a>
+    <a href="history.html">History</a>
+    <a href="how.html">How it Works</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+
+  <div style="display:flex;gap:14px;align-items:center;position:relative">
+
+    <!-- 🔔 NOTIFICATION BELL -->
+    <div id="bell">
+      🔔
+      <span id="bellCount">0</span>
+      <div id="notifBox"></div>
+    </div>
+
+    <div id="profileBox">
+      <span id="profileName"></span>
+      <span id="profileRoleTag"
+        style="background:#ecfdf3;padding:4px 8px;border-radius:8px;
+        font-size:12px;color:#15803d"></span>
+    </div>
+
+    <button class="btn ghost" id="logoutBtn">Logout</button>
+  </div>
+</header>
+
+<div class="container">
+  <h2>History</h2>
+  <p class="muted">Completed claims will appear here.</p>
+  <div id="historyList">Loading...</div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+const API="http://localhost:5001";
+const token = localStorage.getItem("token");
+const role  = localStorage.getItem("role");
+const uid   = localStorage.getItem("userId");
+const socket = io(API);
+
+// ================= UI INIT =================
+function setup(){
+  if(!token){
+    document.getElementById("historyList").innerHTML="<p class='muted'>Login required.</p>";
+    return;
+  }
+
+  document.getElementById("profileBox").style.display="flex";
+  document.getElementById("profileName").innerText=localStorage.getItem("name");
+  document.getElementById("profileRoleTag").innerText=role==="pg"?"PG":"NGO";
+
+  loadHistory();
+  loadUnread();
+  socket.emit("registerUser",uid);
+}
+setup();
+
+// ================= HISTORY =================
+async function loadHistory(){
+  const route = role==="ngo" ? "/history/ngo" : "/history/donor";
+  const res = await fetch(`${API}/api/food${route}`,{
+    headers:{Authorization:"Bearer "+token}
+  });
+  const data = await res.json();
+  const box=document.getElementById("historyList");
+  box.innerHTML="";
+  if(!data.length){
+    box.innerHTML="<p class='muted'>No history yet.</p>";
+    return;
+  }
+  data.forEach(e=>{
+    const f=e.foodId||{};
+    const u=e.ngoId||{};
+    const d=document.createElement("div");
+    d.className="item";
+    d.innerHTML=`
+      <strong>${f.title||"-"}</strong> — ${f.location||"-"}<br>
+      <span class="muted">With: ${u.name||"-"} (${u.email||"-"})</span><br>
+      <span class="muted">${new Date(e.createdAt).toLocaleString()}</span>
+    `;
+    box.appendChild(d);
+  });
+}
+
+// ================= 🔔 NOTIFICATIONS =================
+async function loadUnread(){
+  const r=await fetch(`${API}/api/notification/unread-count`,{
+    headers:{Authorization:"Bearer "+token}
+  });
+  const d=await r.json();
+  if(d.count>0){
+    bellCount.innerText=d.count;
+    bellCount.style.display="inline";
+  }
+}
+
+async function loadNotifications(){
+  const r=await fetch(`${API}/api/notification`,{
+    headers:{Authorization:"Bearer "+token}
+  });
+  const list=await r.json();
+  notifBox.innerHTML="";
+  list.forEach(n=>{
+    const div=document.createElement("div");
+    div.className="notif"+(n.read?"":" unread");
+    div.innerHTML=`${n.message}<small>${new Date(n.createdAt).toLocaleString()}</small>`;
+    notifBox.appendChild(div);
+  });
+  await fetch(`${API}/api/notification/mark-read`,{
+    method:"POST",headers:{Authorization:"Bearer "+token}
+  });
+  bellCount.style.display="none";
+}
+
+// Toggle bell
+bell.onclick=()=>{
+  notifBox.style.display = notifBox.style.display==="block"?"none":"block";
+  loadNotifications();
+};
+
+// Realtime push
+socket.on("notification",()=>{ loadUnread(); });
+
+// Logout
+logoutBtn.onclick=()=>{
+  localStorage.clear();
+  location.href="index.html";
+};
+</script>
+
+</body>
+</html>

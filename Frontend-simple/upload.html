@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Upload Food - FoodShare</title>
+
+<style>
+  :root{ --green:#2b7a0b; --muted:#6b7280; --bg:#f5f7fa; }
+  *{box-sizing:border-box}
+  body{font-family:Inter,system-ui;margin:0;background:var(--bg);color:#0f172a;}
+
+  header{
+    background:white;
+    padding:18px 28px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    box-shadow:0 2px 10px rgba(0,0,0,0.06);
+  }
+
+  nav a{
+    margin:0 10px; text-decoration:none; font-weight:600; color:var(--muted);
+  }
+  nav a:hover{color:var(--green)}
+
+  .btn{padding:10px 14px;border:none;border-radius:10px;font-weight:600;cursor:pointer}
+  .btn.green{background:var(--green);color:white}
+  .btn.ghost{border:1px solid var(--green);color:var(--green);background:transparent}
+
+  .wrap{max-width:900px;margin:32px auto;padding:20px}
+
+  .card{
+    background:white;padding:20px;border-radius:16px;
+    box-shadow:0 4px 16px rgba(0,0,0,0.05);
+  }
+
+  label{font-size:14px;margin-top:12px;display:block;margin-bottom:4px;font-weight:500}
+  input,textarea,select{
+    width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;font-size:14px;
+  }
+  textarea{min-height:80px;resize:vertical}
+  .muted{color:var(--muted)}
+  
+  #toast{
+    position:fixed;bottom:20px;right:20px;
+    background:#16a34a;color:white;padding:12px 18px;
+    border-radius:10px;display:none;font-weight:600;z-index:1000;
+  }
+
+  /* Profile dropdown */
+  #profileBox{display:none;align-items:center;gap:8px;cursor:pointer;}
+  #profileMenu{
+    display:none; position:absolute; top:72px; right:28px;
+    background:white; padding:8px 0; border-radius:10px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.1); min-width:150px;
+  }
+  #profileMenu a{display:block;padding:10px;color:black;text-decoration:none}
+  #profileMenu a:hover{background:#f3f4f6;}
+
+  /* AUTH MODAL */
+  #authOverlay{
+    position:fixed; inset:0; display:none;
+    justify-content:center; align-items:center; backdrop-filter:blur(2px);
+    background:rgba(0,0,0,0.4); z-index:9999;
+  }
+  #authModal{
+    width:360px;background:white;padding:20px;border-radius:14px;
+    display:flex;flex-direction:column;gap:10px;
+    animation:fade .25s ease;
+  }
+  @keyframes fade{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
+  #closeModal{cursor:pointer;text-align:right;font-size:18px;margin-bottom:4px}
+</style>
+</head>
+
+<body>
+
+<div id="toast"></div>
+
+<!-- AUTH MODAL -->
+<div id="authOverlay">
+  <div id="authModal">
+    <div id="closeModal">✖</div>
+    <h3>Login / Register</h3>
+
+    <input id="authName" placeholder="Full Name (register only)" style="display:none;">
+    <input id="authEmail" placeholder="Email">
+    <input id="authPassword" type="password" placeholder="Password">
+    <select id="authRole" style="display:none;">
+      <option value="pg">PG / Donor</option>
+      <option value="ngo">NGO</option>
+    </select>
+
+    <p id="authError" style="color:#b91c1c;font-size:13px"></p>
+    <button class="btn green" id="authSubmit">Login</button>
+    <button class="btn ghost" id="switchMode">Switch to Register</button>
+  </div>
+</div>
+
+<header>
+  <div style="display:flex;gap:10px;font-size:22px;font-weight:800;color:var(--green)">FoodShare</div>
+
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="list.html">Available Food</a>
+    <a href="history.html" id="historyNav" style="display:none;">History</a>
+    <a href="how.html">How it Works</a>
+    <a href="contact.html">Contact</a>
+  </nav>
+
+  <div style="display:flex;gap:10px;align-items:center">
+    <button class="btn green" id="openAuthBtn">Login / Register</button>
+
+    <div id="profileBox">
+      <span id="profileName"></span>
+      <span id="profileRoleTag" style="background:#ecfdf3;padding:4px 8px;border-radius:8px;font-size:12px;color:#15803d"></span>
+    </div>
+
+    <button class="btn ghost" id="logoutBtn">Logout</button>
+  </div>
+</header>
+
+<div id="profileMenu">
+  <a href="upload.html">Upload Food</a>
+  <a href="list.html">See Posts</a>
+  <a href="history.html">History</a>
+  <a id="logoutAction" style="color:#b91c1c;cursor:pointer">Logout</a>
+</div>
+
+<div class="wrap">
+  <div class="card">
+    <h2>Upload Food</h2>
+    <p class="muted">Only PG donors can post food. NGOs can only claim posts.</p>
+
+    <div id="accessMsg" class="muted" style="font-size:15px;margin-bottom:10px;display:none;">
+      ❌ Only PG donors can upload food.
+    </div>
+
+    <form id="uploadForm">
+      <label>Food Title</label>
+      <input id="title" placeholder="e.g., 20 Veg Meals">
+
+      <label>Description</label>
+      <textarea id="description" placeholder="Short details"></textarea>
+
+      <label>Quantity</label>
+      <input id="quantity" type="number" min="1" placeholder="Meals count">
+
+      <label>Pickup Location</label>
+      <input id="location" placeholder="Address / PG name">
+
+      <button class="btn green" style="margin-top:14px;width:100%;">Upload</button>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+const API="http://localhost:5001";
+const socket=io(API);
+let mode="login";
+
+const overlay=document.getElementById("authOverlay");
+const toastBox=document.getElementById("toast");
+
+// Toast
+function toast(msg){
+  toastBox.innerText=msg;
+  toastBox.style.display="block";
+  setTimeout(()=>toastBox.style.display="none",3000);
+}
+
+// Setup UI
+function setup(){
+  const token=localStorage.getItem("token");
+  const role=localStorage.getItem("role");
+  const name=localStorage.getItem("name");
+  const uid=localStorage.getItem("userId");
+
+  if(token){
+    document.getElementById("openAuthBtn").style.display="none";
+    document.getElementById("profileBox").style.display="flex";
+    document.getElementById("profileName").innerText=name;
+    document.getElementById("profileRoleTag").innerText=role==="pg"?"PG":"NGO";
+    document.getElementById("historyNav").style.display="inline";
+
+    if(role!=="pg"){
+      document.getElementById("uploadForm").style.display="none";
+      document.getElementById("accessMsg").style.display="block";
+    }
+
+    socket.emit("registerUser",uid);
+  }
+}
+setup();
+
+// Submit
+document.getElementById("uploadForm").onsubmit=async(e)=>{
+  e.preventDefault();
+  const token=localStorage.getItem("token");
+  const role=localStorage.getItem("role");
+
+  if(!token || role!=="pg")
+    return toast("Only PG donors can upload.");
+
+  const body={
+    title:title.value,
+    description:description.value,
+    quantity:quantity.value,
+    location:location.value
+  };
+
+  const res=await fetch(`${API}/api/food/create`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+    body:JSON.stringify(body)
+  });
+
+  const data=await res.json();
+  if(data.error) return toast(data.error);
+
+  toast("Food Posted!");
+  setTimeout(()=>location.href="list.html",1000);
+};
+
+// Socket messages
+socket.on("foodClaimed",d=>toast(`${d.message} (${d.food})`));
+
+// Dropdown + logout
+profileBox.onclick=()=> profileMenu.style.display=profileMenu.style.display==="block"?"none":"block";
+document.getElementById("logoutBtn").onclick=
+document.getElementById("logoutAction").onclick=()=>{localStorage.clear();location.href="index.html";};
+
+// Auth modal logic
+openAuthBtn.onclick=()=>overlay.style.display="flex";
+closeModal.onclick=()=>overlay.style.display="none";
+
+switchMode.onclick=()=>{
+  mode=mode==="login"?"register":"login";
+  authName.style.display=authRole.style.display=mode==="register"?"block":"none";
+  authSubmit.innerText=mode==="login"?"Login":"Register";
+};
+
+authSubmit.onclick=async()=>{
+  const body = mode==="login" ? 
+    {email:authEmail.value,password:authPassword.value} :
+    {name:authName.value,email:authEmail.value,password:authPassword.value,role:authRole.value};
+
+  const res=await fetch(`${API}/api/auth/${mode}`,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(body)
+  });
+
+  const data=await res.json();
+  if(data.error){authError.innerText=data.error;return;}
+
+  localStorage.setItem("token",data.token);
+  localStorage.setItem("role",data.user.role);
+  localStorage.setItem("name",data.user.name);
+  localStorage.setItem("userId",data.user._id);
+
+  overlay.style.display="none";
+  location.reload();
+};
+</script>
+</body>
+</html>

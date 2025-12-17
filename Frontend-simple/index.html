@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FoodShare — Saving Food, Fighting Hunger</title>
+
+<style>
+:root{
+  --green:#2b7a0b; --accent:#1e5a08; --muted:#6b7280; --card:#fff; --bg:#f5f7fa;
+}
+body{font-family:Inter,system-ui;margin:0;background:var(--bg);color:#0f172a}
+.wrap{max-width:1100px;margin:24px auto;padding:20px}
+header{display:flex;align-items:center;justify-content:space-between}
+nav a{margin:0 8px;color:var(--muted);text-decoration:none;font-weight:600}
+nav a:hover{color:var(--green)}
+.cta{display:flex;gap:12px;align-items:center}
+.btn{background:var(--green);color:white;padding:10px 14px;border-radius:10px;border:none;font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--green);border:1px solid rgba(43,122,11,.3)}
+.hero{display:grid;grid-template-columns:1.1fr 1fr;gap:24px;align-items:center;margin-top:28px}
+.card{background:var(--card);padding:22px;border-radius:18px;box-shadow:0 4px 18px rgba(0,0,0,.07)}
+
+#profileBox{display:none;align-items:center;gap:8px;cursor:pointer;position:relative}
+#profileMenu{
+  display:none;position:absolute;right:0;top:36px;background:white;border-radius:10px;
+  padding:8px 0;box-shadow:0 8px 25px rgba(0,0,0,.15);min-width:160px;z-index:200
+}
+#profileMenu a{display:block;padding:10px 14px;text-decoration:none;color:#111}
+#profileMenu a:hover{background:#f3f4f6}
+
+/* 🔔 Notification */
+#bellWrap{position:relative;cursor:pointer;font-size:18px;display:none}
+#bellCount{
+  position:absolute;top:-6px;right:-6px;
+  background:red;color:white;font-size:11px;
+  padding:2px 6px;border-radius:999px;display:none
+}
+#notifBox{
+  display:none;position:absolute;right:0;top:30px;
+  background:white;width:320px;max-height:360px;
+  overflow:auto;border-radius:12px;
+  box-shadow:0 10px 30px rgba(0,0,0,.15);z-index:999
+}
+.notif{padding:12px;border-bottom:1px solid #eee;font-size:14px}
+.notif.unread{background:#ecfdf3}
+.notif small{display:block;color:#666;margin-top:4px}
+
+/* Toast */
+#toast{
+  position:fixed;bottom:20px;right:20px;
+  background:#16a34a;color:white;padding:14px 18px;
+  border-radius:10px;display:none;font-weight:600
+}
+
+/* Auth modal */
+#authOverlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);
+  display:none;justify-content:center;align-items:center;z-index:9999
+}
+#authModal{
+  background:white;padding:24px;border-radius:14px;width:380px;
+  display:flex;flex-direction:column;gap:10px
+}
+input,select{width:100%;padding:10px;border-radius:8px;border:1px solid #ddd}
+</style>
+</head>
+
+<body>
+<div id="toast"></div>
+
+<!-- AUTH MODAL -->
+<div id="authOverlay">
+  <div id="authModal">
+    <div style="text-align:right;cursor:pointer" id="closeModal">✖</div>
+    <h3>Login / Register</h3>
+    <input id="authName" placeholder="Full Name" style="display:none;">
+    <input id="authEmail" placeholder="Email">
+    <input id="authPassword" type="password" placeholder="Password">
+    <select id="authRole" style="display:none;">
+      <option value="pg">PG / Donor</option>
+      <option value="ngo">NGO</option>
+    </select>
+    <p id="authError" style="color:#b91c1c;font-size:13px"></p>
+    <button class="btn" id="authSubmit">Login</button>
+    <button class="btn ghost" id="switchMode">Switch to Register</button>
+  </div>
+</div>
+
+<div class="wrap">
+<header>
+
+<div style="display:flex;align-items:center;gap:12px">
+  <div style="width:48px;height:48px;border-radius:10px;
+  background:linear-gradient(135deg,var(--green),var(--accent));
+  display:flex;align-items:center;justify-content:center;color:white;font-weight:700">FS</div>
+  <div>
+    <div style="font-weight:800;font-size:20px">FoodShare</div>
+    <div style="font-size:12px;color:var(--muted)">Saving Food · Fighting Hunger</div>
+  </div>
+</div>
+
+<nav>
+  <a href="index.html">Home</a>
+  <a href="list.html">Available Food</a>
+  <a href="how.html">How it Works</a>
+  <a href="contact.html">Contact Us</a>
+  <a href="history.html" id="historyNav" style="display:none">History</a>
+</nav>
+
+<div class="cta">
+  <button class="btn" id="openAuthBtn">Login / Register</button>
+
+  <!-- 🔔 Notification Bell -->
+  <div id="bellWrap">
+    🔔<span id="bellCount">0</span>
+    <div id="notifBox"></div>
+  </div>
+
+  <div id="profileBox">
+    <div id="profileName"></div>
+    <div id="profileRoleTag"
+         style="background:#ecfdf3;color:#15803d;font-size:11px;padding:3px 7px;border-radius:6px"></div>
+    <div id="profileMenu">
+      <a href="upload.html" id="uploadLink">Upload Food</a>
+      <a href="list.html">See Food Posts</a>
+      <a href="history.html">History</a>
+      <a id="logoutBtn" style="color:#b91c1c">Logout</a>
+    </div>
+  </div>
+</div>
+
+</header>
+
+<main style="margin-top:30px">
+<div class="hero">
+<div class="card">
+<h1>Donate surplus food. Feed those in need.</h1>
+<p style="color:var(--muted)">
+FoodShare connects PG residents & NGOs to safely redistribute cooked surplus food.
+</p>
+<div style="display:flex;gap:10px;margin-top:14px">
+<button class="btn" onclick="location.href='list.html'">View Available Food</button>
+<button class="btn ghost" onclick="location.href='upload.html'">Post Food</button>
+</div>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden">
+<img src="https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=60"
+style="width:100%;height:100%;object-fit:cover">
+</div>
+</div>
+</main>
+</div>
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script>
+const API="http://localhost:5001";
+const socket=io(API);
+let mode="login";
+
+// ===== UI SETUP =====
+function setupUserUI(){
+  const token=localStorage.getItem("token");
+  const role=localStorage.getItem("role");
+  const name=localStorage.getItem("name");
+  const uid =localStorage.getItem("userId");
+
+  if(token){
+    openAuthBtn.style.display="none";
+    profileBox.style.display="flex";
+    historyNav.style.display="inline";
+    bellWrap.style.display="block";
+
+    profileName.innerText=name;
+    profileRoleTag.innerText=role==="pg"?"PG":"NGO";
+    if(role==="ngo") uploadLink.style.display="none";
+
+    socket.emit("registerUser",uid);
+    loadUnread();
+  }
+}
+setupUserUI();
+
+// ===== 🔔 NOTIFICATIONS =====
+async function loadUnread(){
+  const r=await fetch(`${API}/api/notification/unread-count`,{
+    headers:{Authorization:"Bearer "+localStorage.getItem("token")}
+  });
+  const d=await r.json();
+  if(d.count>0){
+    bellCount.innerText=d.count;
+    bellCount.style.display="inline";
+  }
+}
+
+async function loadNotifications(){
+  const r=await fetch(`${API}/api/notification`,{
+    headers:{Authorization:"Bearer "+localStorage.getItem("token")}
+  });
+  const list=await r.json();
+  notifBox.innerHTML="";
+  if(!list.length){
+    notifBox.innerHTML="<p style='padding:12px;color:#666'>No notifications</p>";
+    return;
+  }
+  list.forEach(n=>{
+    const div=document.createElement("div");
+    div.className="notif"+(n.read?"":" unread");
+    div.innerHTML=`${n.message}<small>${new Date(n.createdAt).toLocaleString()}</small>`;
+    notifBox.appendChild(div);
+  });
+
+  await fetch(`${API}/api/notification/mark-read`,{
+    method:"POST",
+    headers:{Authorization:"Bearer "+localStorage.getItem("token")}
+  });
+  bellCount.style.display="none";
+}
+
+bellWrap.onclick=()=>{
+  notifBox.style.display=notifBox.style.display==="block"?"none":"block";
+  loadNotifications();
+};
+
+socket.on("notification",()=>loadUnread());
+
+// ===== AUTH =====
+openAuthBtn.onclick=()=>authOverlay.style.display="flex";
+closeModal.onclick=()=>authOverlay.style.display="none";
+
+switchMode.onclick=()=>{
+  mode=mode==="login"?"register":"login";
+  authName.style.display=authRole.style.display=mode==="register"?"block":"none";
+  authSubmit.innerText=mode==="login"?"Login":"Register";
+};
+
+authSubmit.onclick=async()=>{
+  const body=mode==="login"
+    ? {email:authEmail.value,password:authPassword.value}
+    : {name:authName.value,email:authEmail.value,password:authPassword.value,role:authRole.value};
+
+  const r=await fetch(`${API}/api/auth/${mode}`,{
+    method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(body)
+  });
+  const d=await r.json();
+  if(d.error){authError.innerText=d.error;return;}
+
+  localStorage.setItem("token",d.token);
+  localStorage.setItem("role",d.user.role);
+  localStorage.setItem("name",d.user.name);
+  localStorage.setItem("userId",d.user._id);
+  location.reload();
+};
+
+// Dropdown + logout
+profileBox.onclick=()=>profileMenu.style.display=profileMenu.style.display==="block"?"none":"block";
+logoutBtn.onclick=()=>{localStorage.clear();location.reload();};
+</script>
+</body>
+</html>
